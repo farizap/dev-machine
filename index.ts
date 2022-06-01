@@ -9,7 +9,8 @@ const AVAILABILITY_ZONE = "ap-southeast-1a"
 // TODO: Maintain EFS creation in pulumi
 const EFS_ID = "fs-0e667dd691652119e"
 const EFS_MAIN_AP = "fsap-05c449dde05d0cf02"
-const EFS_DOCKER_AP = "	fsap-01613c64a6fd777cb"
+const EFS_DOCKER_AP = "fsap-01613c64a6fd777cb"
+const USER_DATA_URL = "https://raw.githubusercontent.com/farizap/dev-machine/master/scripts/user-data.sh"
 
 const vpc = new aws.ec2.DefaultVpc("vpc")
 const subnet = new aws.ec2.DefaultSubnet("alphaSubnet", {
@@ -41,42 +42,44 @@ const sshKey = new aws.ec2.KeyPair("dev", {
 })
 
 new aws.ssm.Parameter("dev_ssh_key", {
+  name: "dev_ssh_key",
   type: "String",
   value: sshKey.publicKey,
 })
 
 new aws.ssm.Parameter("az", {
+  name: "az",
   type: "String",
   value: AVAILABILITY_ZONE,
 })
 
 new aws.ssm.Parameter("dev_efs", {
+  name: "dev_efs",
   type: "String",
   value: EFS_ID,
 })
 
 new aws.ssm.Parameter("dev_main_ap", {
+  name: "dev_main_ap",
   type: "String",
   value: EFS_MAIN_AP,
 })
 
 new aws.ssm.Parameter("dev_docker_ap", {
+  name: "dev_docker_ap",
   type: "String",
   value: EFS_DOCKER_AP,
 })
 
-const userData =
-  //
-  // <-- ADD THIS DEFINITION
-  `#!/bin/sh
-curl -L -s \${var.dev_user_data_url} | bash`
+const userData = `#!/bin/sh
+curl -L -s ${USER_DATA_URL} | bash`
 
 // Request a spot instance at $0.03
 const cheapWorker = new aws.ec2.SpotInstanceRequest("cheap_worker", {
-  // Amazon Linux
+  // Ubuntu
   // ami: "ami-07b575563ed0b0d0c",
 
-  // Ubuntu
+  // Amazon Linux
   ami: "ami-0ed7f0f2fae2309cd",
 
   instanceType: "t4g.large",
@@ -100,6 +103,6 @@ const record = new cloudflare.Record("sample-record", {
   zoneId: "ff21330beec903203ff7ed624d722d05",
   type: "A",
   value: cheapWorker.publicIp,
-  ttl: 30,
+  ttl: 60,
   proxied: false,
 })

@@ -22,6 +22,7 @@ done
 echo "No other yum process is running at the moment..."
 
 # export AWS_DEFAULT_REGION=$( curl -s http://169.254.169.254/latest/meta-data/placement/region )
+export AWS_DEFAULT_REGION="ap-southeast-1"
 EFS_ID=$( aws ssm get-parameter --name dev_efs --output text --query 'Parameter.Value' )
 ACCESS_POINT_DATA=$( aws ssm get-parameter --name dev_main_ap --output text --query 'Parameter.Value' )
 ACCESS_POINT_DOCKER=$( aws ssm get-parameter --name dev_docker_ap --output text --query 'Parameter.Value' )
@@ -36,9 +37,9 @@ yum install -y amazon-efs-utils
 pip3 -q install botocore
 
 echo "Mount EFS file system into home directory"
-mount -t efs -o az=$EFS_MOUNT_AZ,tls,accesspoint=$ACCESS_POINT_DATA $EFS_ID:/ $HOME_DIR
-mkdir -p /dockerlib
-mount -t efs -o az=$EFS_MOUNT_AZ,tls,accesspoint=$ACCESS_POINT_DOCKER $EFS_ID:/ /dockerlib
+sudo mount -t efs -o az=$EFS_MOUNT_AZ,tls,accesspoint=$ACCESS_POINT_DATA $EFS_ID:/ $HOME_DIR
+sudo mkdir -p /dockerlib
+sudo mount -t efs -o az=$EFS_MOUNT_AZ,tls,accesspoint=$ACCESS_POINT_DOCKER $EFS_ID:/ /dockerlib
 
 echo "Preparing Bash profile..."
 [ ! -f $HOME_DIR/.bashrc ] && {
