@@ -1,0 +1,4 @@
+config:
+  aws:region: ap-southeast-1
+  cloudflare:apiToken:
+    secure: AAABAAgkqwA1jh0m/y5nqHV+dPZAlWEMaI6FKdtOuxUD2DWpylxq3aDH414qlh0a6dHsunW+oKcfUYwOUjAjw3hlUfASlnHA
