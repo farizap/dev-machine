@@ -37,9 +37,9 @@ yum install -y amazon-efs-utils
 pip3 -q install botocore
 
 echo "Mount EFS file system into home directory"
-sudo mount -t efs -o az=$EFS_MOUNT_AZ,tls,accesspoint=$ACCESS_POINT_DATA $EFS_ID:/ $HOME_DIR
+sudo mount -t efs -o tls,accesspoint=$ACCESS_POINT_DATA $EFS_ID:/ $HOME_DIR
 sudo mkdir -p /dockerlib
-sudo mount -t efs -o az=$EFS_MOUNT_AZ,tls,accesspoint=$ACCESS_POINT_DOCKER $EFS_ID:/ /dockerlib
+sudo mount -t efs -o tls,accesspoint=$ACCESS_POINT_DOCKER $EFS_ID:/ /dockerlib
 
 echo "Preparing Bash profile..."
 [ ! -f $HOME_DIR/.bashrc ] && {
