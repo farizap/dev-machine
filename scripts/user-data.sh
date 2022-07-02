@@ -80,6 +80,8 @@ echo "Docker installed, but not started. To start docker use following command:
 
 sudo systemctl start docker
 
+sudo pip3 install docker-compose
+
 # GIT_REPO=farizap/dev-machine
 # RAW_GIT_URL=https://raw.githubusercontent.com/${GIT_REPO}/master/scripts
 # AUTO_INSTALL_SCRIPTS="01-install-docker.auto-install.sh"

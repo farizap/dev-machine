@@ -236,8 +236,8 @@ const cheapWorker = new aws.ec2.SpotInstanceRequest(
     // Amazon Linux (ARM)
     ami: "ami-0ed7f0f2fae2309cd",
 
-    // instanceType: "t4g.large",
-    instanceType: "t4g.nano",
+    instanceType: "t4g.large",
+    // instanceType: "t4g.nano",
 
     spotPrice: SPOT_PRICE,
     tags: {
