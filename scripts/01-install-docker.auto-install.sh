@@ -3,13 +3,8 @@
 DOCKER_VAR_LIB=/dockerlib
 mkdir -p $DOCKER_VAR_LIB
 
-sudo apt-get install \
-    ca-certificates \
-    curl \
-    gnupg \
-    lsb-release
-sudo apt-get update
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+amazon-linux-extras install -q -y docker && \
+usermod -a -G docker ec2-user
 
 usermod -a -G docker ec2-user
 

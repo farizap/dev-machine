@@ -2,7 +2,24 @@
 
 # Sometimes there is another installer run by other cloud-init scripts
 # Let's wait until they finish first
+[ -z "$YUM_PID_FILE" ] && YUM_PID_FILE=/var/run/yum.pid
 
+MAX_RETRIES=10
+RETRY=0
+while [ -f "$YUM_PID_FILE" ];
+do
+  if [ $RETRY -ge $MAX_RETRIES ]; then
+    echo "Other yum process taking too long to finish, I give up..." >&2
+    exit 1
+  fi
+
+  SECONDS=$(( 2 ** $RETRY ))
+  echo "Waiting yum ${YUM_PID_FILE} to finish... (${SECONDS} secs)"
+  sleep $SECONDS
+  RETRY=$(( $RETRY + 1 ))
+done
+
+echo "No other yum process is running at the moment..."
 
 # export AWS_DEFAULT_REGION=$( curl -s http://169.254.169.254/latest/meta-data/placement/region )
 export AWS_DEFAULT_REGION="ap-southeast-1"
@@ -16,29 +33,8 @@ SSH_PUBLIC_KEY=$( aws ssm get-parameter --name dev_ssh_key --output text --query
 HOME_DIR=/home/ec2-user
 
 echo "Installing Amazon EFS file system utilities..."
-sudo apt-get update
-sudo apt-get -y install git binutils
-sudo mkdir -p /efs
-cd /efs
-git clone https://github.com/aws/efs-utilities
-cd /efs/efs-utils
-./build-deb.sh
-sudo apt-get -y install ./build/amazon-efs-utils*deb
-
-sudo apt-get update
-sudo apt-get -y install wget
-if echo $(python3 -V 2>&1) | grep -e "Python 3.6"; then
-    sudo wget https://bootstrap.pypa.io/pip/3.6/get-pip.py -O /tmp/get-pip.py
-elif echo $(python3 -V 2>&1) | grep -e "Python 3.5"; then
-    sudo wget https://bootstrap.pypa.io/pip/3.5/get-pip.py -O /tmp/get-pip.py
-elif echo $(python3 -V 2>&1) | grep -e "Python 3.4"; then
-    sudo wget https://bootstrap.pypa.io/pip/3.4/get-pip.py -O /tmp/get-pip.py
-else
-    sudo apt-get -y install python3-distutils
-    sudo wget https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py
-fi
-sudo python3 /tmp/get-pip.py
-sudo pip3 install botocore
+yum install -y amazon-efs-utils
+pip3 -q install botocore
 
 echo "Mount EFS file system into home directory"
 sudo mount -t efs -o tls,accesspoint=$ACCESS_POINT_DATA $EFS_ID:/ $HOME_DIR
@@ -57,6 +53,13 @@ sudo -u ec2-user touch $HOME_DIR/.ssh/authorized_keys
 grep -q -F "${SSH_PUBLIC_KEY}" $HOME_DIR/.ssh/authorized_keys || {
   echo "${SSH_PUBLIC_KEY}" | sudo -u ec2-user tee -a "${SSH_PUBLIC_KEY}" $HOME_DIR/.ssh/authorized_keys
 }
+
+echo "Install git"
+sudo yum -y install git
+
+echo "Install oh my zsh"
+sudo yum update && sudo yum -y install zsh
+sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
 GIT_REPO=farizap/dev-machine
 RAW_GIT_URL=https://raw.githubusercontent.com/${GIT_REPO}/master/scripts

@@ -5,6 +5,7 @@ import * as cloudflare from "@pulumi/cloudflare";
 // import { devMachineRole } from "./roles";
 
 import 'dotenv/config'
+console.log(process.env)
 
 const SPOT_PRICE = "0.03";
 const AVAILABILITY_ZONE = "ap-southeast-1a";
