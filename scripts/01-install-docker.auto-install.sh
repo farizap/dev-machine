@@ -19,4 +19,5 @@ sed -i "s@OPTIONS=\"--default-ulimit@OPTIONS=\"--data-root $DOCKER_VAR_LIB --def
 
 echo "Docker installed, but not started. To start docker use following command:
   -> sudo systemctl start docker"
-systemctl start docker
+
+sudo systemctl start docker

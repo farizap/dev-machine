@@ -4,6 +4,8 @@ import * as aws from "@pulumi/aws";
 import * as cloudflare from "@pulumi/cloudflare";
 // import { devMachineRole } from "./roles";
 
+import 'dotenv/config'
+
 const SPOT_PRICE = "0.03";
 const AVAILABILITY_ZONE = "ap-southeast-1a";
 
@@ -229,10 +231,10 @@ const instanceProfile = new aws.iam.InstanceProfile(
 const cheapWorker = new aws.ec2.SpotInstanceRequest(
   "cheap_worker",
   {
-    // Ubuntu
-    // ami: "ami-07b575563ed0b0d0c",
+    // Ubuntu (ARM)
+    // ami: "ami-06ecd61e4bded3bfe",
 
-    // Amazon Linux
+    // Amazon Linux (ARM)
     ami: "ami-0ed7f0f2fae2309cd",
 
     // instanceType: "t4g.large",
