@@ -15,7 +15,6 @@ const USER_DATA_URL =
   "https://raw.githubusercontent.com/farizap/dev-machine/master/scripts/user-data.sh";
 
 const caller = await aws.getCallerIdentity({});
-console.log(caller);
 const config = new pulumi.Config();
 
 export const role = new aws.iam.Role("role", {
@@ -236,7 +235,9 @@ const cheapWorker = new aws.ec2.SpotInstanceRequest(
     // Amazon Linux
     ami: "ami-0ed7f0f2fae2309cd",
 
-    instanceType: "t4g.large",
+    // instanceType: "t4g.large",
+    instanceType: "t4g.nano",
+
     spotPrice: SPOT_PRICE,
     tags: {
       Name: "CheapWorker",
@@ -250,7 +251,7 @@ const cheapWorker = new aws.ec2.SpotInstanceRequest(
     vpcSecurityGroupIds: [securityGroup.id],
     iamInstanceProfile: instanceProfile.name,
   },
-  { dependsOn: [devMachineRole] }
+  { dependsOn: [devMachineRole, alphaMountTarget] }
 );
 
 cheapWorker.publicIp.apply((s) => pulumi.log.info("ip: " + s));
