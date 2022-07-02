@@ -58,16 +58,37 @@ echo "Install git"
 sudo yum -y install git
 
 echo "Install oh my zsh"
-sudo yum update && sudo yum -y install zsh
+sudo yum -y update && sudo yum -y install zsh
 sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
-GIT_REPO=farizap/dev-machine
-RAW_GIT_URL=https://raw.githubusercontent.com/${GIT_REPO}/master/scripts
-AUTO_INSTALL_SCRIPTS="01-install-docker.auto-install.sh"
 
-for script in $AUTO_INSTALL_SCRIPTS
-do
-  echo "Downloading ${RAW_GIT_URL}/$script..."
-  curl -L -s ${RAW_GIT_URL}/$script | bash
-  echo "$script done at $( date )" >> /tmp/dev-machine-installer.log
-done
+echo "Install docker"
+DOCKER_VAR_LIB=/dockerlib
+mkdir -p $DOCKER_VAR_LIB
+
+amazon-linux-extras install -q -y docker && \
+usermod -a -G docker ec2-user
+
+usermod -a -G docker ec2-user
+
+echo "Changing Docker data root location to ${DOCKER_VAR_LIB}..."
+cp /etc/sysconfig/docker /etc/sysconfig/docker.$( date +%s ).backup
+sed -i "s@OPTIONS=\"--default-ulimit@OPTIONS=\"--data-root $DOCKER_VAR_LIB --default-ulimit@g" /etc/sysconfig/docker
+
+echo "Docker installed, but not started. To start docker use following command:
+  -> sudo systemctl start docker"
+
+sudo systemctl start docker
+
+# GIT_REPO=farizap/dev-machine
+# RAW_GIT_URL=https://raw.githubusercontent.com/${GIT_REPO}/master/scripts
+# AUTO_INSTALL_SCRIPTS="01-install-docker.auto-install.sh"
+
+# for script in $AUTO_INSTALL_SCRIPTS
+# do
+#   echo "Downloading ${RAW_GIT_URL}/$script..."
+#   curl -L -s ${RAW_GIT_URL}/$script | bash
+#   echo "$script done at $( date )" >> /tmp/dev-machine-installer.log
+# done
+
+

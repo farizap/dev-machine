@@ -4,8 +4,7 @@ import * as aws from "@pulumi/aws";
 import * as cloudflare from "@pulumi/cloudflare";
 // import { devMachineRole } from "./roles";
 
-import 'dotenv/config'
-console.log(process.env)
+import "dotenv/config";
 
 const SPOT_PRICE = "0.03";
 const AVAILABILITY_ZONE = "ap-southeast-1a";
@@ -18,7 +17,6 @@ const USER_DATA_URL =
   "https://raw.githubusercontent.com/farizap/dev-machine/master/scripts/user-data.sh";
 
 const caller = await aws.getCallerIdentity({});
-const config = new pulumi.Config();
 
 export const role = new aws.iam.Role("role", {
   name: "role",
@@ -259,8 +257,11 @@ const cheapWorker = new aws.ec2.SpotInstanceRequest(
 
 cheapWorker.publicIp.apply((s) => pulumi.log.info("ip: " + s));
 
+const cf = new cloudflare.Provider("cf", {
+  apiToken: process.env.CLOUDFLARE_API_TOKEN,
+});
 const record = new cloudflare.Record(
-  "sample-record",
+  "dev-machine-record",
   {
     name: "dev-machine",
     zoneId: "ff21330beec903203ff7ed624d722d05",
@@ -269,5 +270,5 @@ const record = new cloudflare.Record(
     ttl: 60,
     proxied: false,
   },
-  { dependsOn: [cheapWorker] }
+  { dependsOn: [cheapWorker], provider: cf }
 );
