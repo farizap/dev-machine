@@ -6,17 +6,52 @@ import * as cloudflare from "@pulumi/cloudflare";
 
 import "dotenv/config";
 
-const SPOT_PRICE = "0.03";
+const SPOT_PRICE = "0.1";
 const AVAILABILITY_ZONE = "ap-southeast-1a";
 
 // TODO: Maintain EFS creation in pulumi
-const EFS_ID = "fs-0e667dd691652119e";
-const EFS_MAIN_AP = "fsap-05c449dde05d0cf02";
-const EFS_DOCKER_AP = "fsap-01613c64a6fd777cb";
+// TODO: Use static IP instead of cloudflare
 const USER_DATA_URL =
   "https://raw.githubusercontent.com/farizap/dev-machine/master/scripts/user-data.sh";
 
 const caller = await aws.getCallerIdentity({});
+
+const efs = new aws.efs.FileSystem("dev-machine", undefined, {
+  retainOnDelete: true,
+});
+
+const efsDataAP = new aws.efs.AccessPoint(
+  "dataAP",
+  {
+    fileSystemId: efs.id,
+    rootDirectory: {
+      creationInfo: {
+        ownerGid: 1000,
+        ownerUid: 1000,
+        permissions: "0755",
+      },
+      path: "/data",
+    },
+    posixUser: { gid: 1000, uid: 1000 },
+  },
+  { retainOnDelete: true, dependsOn: [efs] }
+);
+const efsDockerAP = new aws.efs.AccessPoint(
+  "dockerAP",
+  {
+    fileSystemId: efs.id,
+    rootDirectory: {
+      creationInfo: {
+        ownerGid: 0,
+        ownerUid: 0,
+        permissions: "0755",
+      },
+      path: "/docker",
+    },
+    posixUser: { gid: 0, uid: 0 },
+  },
+  { retainOnDelete: true, dependsOn: [efs] }
+);
 
 export const role = new aws.iam.Role("role", {
   name: "role",
@@ -173,11 +208,15 @@ const efssecurityGroup = new aws.ec2.SecurityGroup("efssecuritygroup", {
   ],
 });
 
-const alphaMountTarget = new aws.efs.MountTarget("alphaMountTarget", {
-  fileSystemId: EFS_ID,
-  subnetId: subnet.id,
-  securityGroups: [efssecurityGroup.id],
-});
+const alphaMountTarget = new aws.efs.MountTarget(
+  "alphaMountTarget",
+  {
+    fileSystemId: efs.id,
+    subnetId: subnet.id,
+    securityGroups: [efssecurityGroup.id],
+  },
+  { dependsOn: [efs], retainOnDelete: true }
+);
 
 const sshKey = new aws.ec2.KeyPair("dev", {
   publicKey:
@@ -196,23 +235,35 @@ new aws.ssm.Parameter("az", {
   value: AVAILABILITY_ZONE,
 });
 
-new aws.ssm.Parameter("dev_efs", {
-  name: "dev_efs",
-  type: "String",
-  value: EFS_ID,
-});
+new aws.ssm.Parameter(
+  "dev_efs",
+  {
+    name: "dev_efs",
+    type: "String",
+    value: efs.id,
+  },
+  { dependsOn: [efs] }
+);
 
-new aws.ssm.Parameter("dev_main_ap", {
-  name: "dev_main_ap",
-  type: "String",
-  value: EFS_MAIN_AP,
-});
+new aws.ssm.Parameter(
+  "dev_main_ap",
+  {
+    name: "dev_main_ap",
+    type: "String",
+    value: efsDataAP.id,
+  },
+  { dependsOn: [efsDataAP] }
+);
 
-new aws.ssm.Parameter("dev_docker_ap", {
-  name: "dev_docker_ap",
-  type: "String",
-  value: EFS_DOCKER_AP,
-});
+new aws.ssm.Parameter(
+  "dev_docker_ap",
+  {
+    name: "dev_docker_ap",
+    type: "String",
+    value: efsDockerAP.id,
+  },
+  { dependsOn: [efsDockerAP] }
+);
 
 const userData = `#!/bin/sh
 curl -L -s ${USER_DATA_URL} | bash`;
@@ -233,11 +284,17 @@ const cheapWorker = new aws.ec2.SpotInstanceRequest(
     // Ubuntu (ARM)
     // ami: "ami-06ecd61e4bded3bfe",
 
-    // Amazon Linux (ARM)
-    ami: "ami-0ed7f0f2fae2309cd",
+    // Amazon Linux (AMD64)
+    ami: "ami-0c802847a7dd848c0",
 
-    instanceType: "t4g.large",
+    // Amazon Linux (ARM)
+    // ami: "ami-0ed7f0f2fae2309cd",
+
     // instanceType: "t4g.nano",
+    instanceType: "t3.medium",
+    // instanceType: "t3.large",
+    // instanceType: "t4g.medium",
+    // instanceType: "t4g.large",
 
     spotPrice: SPOT_PRICE,
     tags: {
@@ -252,23 +309,21 @@ const cheapWorker = new aws.ec2.SpotInstanceRequest(
     vpcSecurityGroupIds: [securityGroup.id],
     iamInstanceProfile: instanceProfile.name,
   },
-  { dependsOn: [devMachineRole, alphaMountTarget] }
+  { dependsOn: [devMachineRole, alphaMountTarget, efsDataAP, efsDockerAP] }
 );
+
+const eip = new aws.ec2.Eip(
+  "eip",
+  {
+    vpc: true,
+  },
+  { dependsOn: [cheapWorker], retainOnDelete: true }
+);
+
+const eipAssoc = new aws.ec2.EipAssociation("eipassoc", {
+  instanceId: cheapWorker.spotInstanceId,
+  allocationId: eip.id,
+});
 
 cheapWorker.publicIp.apply((s) => pulumi.log.info("ip: " + s));
-
-const cf = new cloudflare.Provider("cf", {
-  apiToken: process.env.CLOUDFLARE_API_TOKEN,
-});
-const record = new cloudflare.Record(
-  "dev-machine-record",
-  {
-    name: "dev-machine",
-    zoneId: "ff21330beec903203ff7ed624d722d05",
-    type: "A",
-    value: cheapWorker.publicIp,
-    ttl: 60,
-    proxied: false,
-  },
-  { dependsOn: [cheapWorker], provider: cf }
-);
+eip.publicIp.apply((s) => pulumi.log.info("eip: " + s));
