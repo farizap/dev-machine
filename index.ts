@@ -1,4 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
+
 import * as aws from "@pulumi/aws";
 // import * as awsx from "@pulumi/awsx"
 import * as cloudflare from "@pulumi/cloudflare";
@@ -215,7 +216,7 @@ const alphaMountTarget = new aws.efs.MountTarget(
     subnetId: subnet.id,
     securityGroups: [efssecurityGroup.id],
   },
-  { dependsOn: [efs], retainOnDelete: true }
+  { dependsOn: [efs] }
 );
 
 const sshKey = new aws.ec2.KeyPair("dev", {
@@ -285,14 +286,14 @@ const cheapWorker = new aws.ec2.SpotInstanceRequest(
     // ami: "ami-06ecd61e4bded3bfe",
 
     // Amazon Linux (AMD64)
-    ami: "ami-0c802847a7dd848c0",
+    ami: "ami-0af2f764c580cc1f9",
 
     // Amazon Linux (ARM)
     // ami: "ami-0ed7f0f2fae2309cd",
 
     // instanceType: "t4g.nano",
-    instanceType: "t3.medium",
-    // instanceType: "t3.large",
+    // instanceType: "t3.medium",
+    instanceType: "t3.large",
     // instanceType: "t4g.medium",
     // instanceType: "t4g.large",
 
@@ -312,13 +313,9 @@ const cheapWorker = new aws.ec2.SpotInstanceRequest(
   { dependsOn: [devMachineRole, alphaMountTarget, efsDataAP, efsDockerAP] }
 );
 
-const eip = new aws.ec2.Eip(
-  "eip",
-  {
-    vpc: true,
-  },
-  { dependsOn: [cheapWorker], retainOnDelete: true }
-);
+const eip = new aws.ec2.Eip("eip", {
+  vpc: true,
+});
 
 const eipAssoc = new aws.ec2.EipAssociation("eipassoc", {
   instanceId: cheapWorker.spotInstanceId,
@@ -327,3 +324,19 @@ const eipAssoc = new aws.ec2.EipAssociation("eipassoc", {
 
 cheapWorker.publicIp.apply((s) => pulumi.log.info("ip: " + s));
 eip.publicIp.apply((s) => pulumi.log.info("eip: " + s));
+
+const cf = new cloudflare.Provider("cf", {
+  apiToken: process.env.CLOUDFLARE_API_TOKEN,
+});
+const record = new cloudflare.Record(
+  "sample-record",
+  {
+    name: "dev-machine",
+    zoneId: "ff21330beec903203ff7ed624d722d05",
+    type: "A",
+    value: eip.publicIp,
+    ttl: 60,
+    proxied: true,
+  },
+  { dependsOn: [eip], provider: cf }
+);

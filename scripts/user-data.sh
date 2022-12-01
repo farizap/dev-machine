@@ -78,10 +78,14 @@ sed -i "s@OPTIONS=\"--default-ulimit@OPTIONS=\"--data-root $DOCKER_VAR_LIB --def
 echo "Docker installed, but not started. To start docker use following command:
   -> sudo systemctl start docker"
 
+# Install docker
+sudo pip3 install docker-compose
 sudo systemctl start docker
 
-sudo pip3 install docker-compose
-
+# Install nodejs
+sudo yum update
+curl –sL https://rpm.nodesource.com/setup_16.x | sudo bash -
+sudo yum install –y nodejs
 # GIT_REPO=farizap/dev-machine
 # RAW_GIT_URL=https://raw.githubusercontent.com/${GIT_REPO}/master/scripts
 # AUTO_INSTALL_SCRIPTS="01-install-docker.auto-install.sh"
