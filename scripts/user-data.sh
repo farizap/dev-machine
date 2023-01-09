@@ -60,6 +60,8 @@ sudo yum -y install git
 echo "Install oh my zsh"
 sudo yum -y update && sudo yum -y install zsh
 sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+yum install wget git
+wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh
 
 
 echo "Install docker"
@@ -67,9 +69,6 @@ DOCKER_VAR_LIB=/dockerlib
 mkdir -p $DOCKER_VAR_LIB
 
 amazon-linux-extras install -q -y docker && \
-usermod -a -G docker ec2-user
-
-usermod -a -G docker ec2-user
 
 echo "Changing Docker data root location to ${DOCKER_VAR_LIB}..."
 cp /etc/sysconfig/docker /etc/sysconfig/docker.$( date +%s ).backup
@@ -77,15 +76,25 @@ sed -i "s@OPTIONS=\"--default-ulimit@OPTIONS=\"--data-root $DOCKER_VAR_LIB --def
 
 echo "Docker installed, but not started. To start docker use following command:
   -> sudo systemctl start docker"
-
+  
 # Install docker
 sudo pip3 install docker-compose
 sudo systemctl start docker
 
+usermod -a -G docker ec2-user
+sudo chmod 666 /var/run/docker.sock
+
 # Install nodejs
-sudo yum update
-curl –sL https://rpm.nodesource.com/setup_16.x | sudo bash -
-sudo yum install –y nodejs
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
+nvm install 16
+
+
+# Install Golang
+wget https://dl.google.com/go/go1.19.4.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.19.4.linux-amd64.tar.gz
+export PATH=$PATH:/usr/local/go/bin
+
+
 # GIT_REPO=farizap/dev-machine
 # RAW_GIT_URL=https://raw.githubusercontent.com/${GIT_REPO}/master/scripts
 # AUTO_INSTALL_SCRIPTS="01-install-docker.auto-install.sh"

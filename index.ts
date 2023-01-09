@@ -286,7 +286,8 @@ const cheapWorker = new aws.ec2.SpotInstanceRequest(
     // ami: "ami-06ecd61e4bded3bfe",
 
     // Amazon Linux (AMD64)
-    ami: "ami-0af2f764c580cc1f9",
+    // ami: "ami-0af2f764c580cc1f9",
+    ami: "ami-005835d578c62050d",
 
     // Amazon Linux (ARM)
     // ami: "ami-0ed7f0f2fae2309cd",
@@ -336,7 +337,7 @@ const record = new cloudflare.Record(
     type: "A",
     value: eip.publicIp,
     ttl: 60,
-    proxied: true,
+    proxied: false,
   },
   { dependsOn: [eip], provider: cf }
 );
